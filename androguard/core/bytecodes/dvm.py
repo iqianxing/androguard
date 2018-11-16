@@ -25,12 +25,20 @@ import warnings
 log = logging.getLogger("androguard.dvm")
 
 # TODO there is DEX 38 already
-DEX_FILE_MAGIC_35 = 'dex\n035\x00'
-DEX_FILE_MAGIC_36 = 'dex\n036\x00'
-DEX_FILE_MAGIC_37 = 'dex\n037\x00'
-ODEX_FILE_MAGIC_35 = 'dey\n035\x00'
-ODEX_FILE_MAGIC_36 = 'dey\n036\x00'
-ODEX_FILE_MAGIC_37 = 'dey\n037\x00'
+if sys.version_info[0] == 3:
+    DEX_FILE_MAGIC_35 = b'dex\n035\x00'
+    DEX_FILE_MAGIC_36 = b'dex\n036\x00'
+    DEX_FILE_MAGIC_37 = b'dex\n037\x00'
+    ODEX_FILE_MAGIC_35 = b'dey\n035\x00'
+    ODEX_FILE_MAGIC_36 = b'dey\n036\x00'
+    ODEX_FILE_MAGIC_37 = b'dey\n037\x00'
+else:
+    DEX_FILE_MAGIC_35 = 'dex\n035\x00'
+    DEX_FILE_MAGIC_36 = 'dex\n036\x00'
+    DEX_FILE_MAGIC_37 = 'dex\n037\x00'
+    ODEX_FILE_MAGIC_35 = 'dey\n035\x00'
+    ODEX_FILE_MAGIC_36 = 'dey\n036\x00'
+    ODEX_FILE_MAGIC_37 = 'dey\n037\x00'
 
 # https://source.android.com/devices/tech/dalvik/dex-format#value-formats
 VALUE_BYTE = 0x00  # (none; must be 0)      ubyte[1]         signed one-byte integer value
@@ -84,6 +92,7 @@ DBG_Special_Opcodes_BEGIN = 0x0a  # (none)  advances the line and address regist
 DBG_Special_Opcodes_END = 0xff
 DBG_LINE_BASE = -4
 DBG_LINE_RANGE = 15
+
 
 class Error(Exception):
     """
@@ -204,6 +213,12 @@ def get_byte(buff):
 
 
 def readuleb128(buff):
+    """
+    Read an unsigned LEB128 at the current position of the buffer
+
+    :param buff: a file like object
+    :return: decoded unsigned LEB128
+    """
     result = get_byte(buff)
     if result > 0x7f:
         cur = get_byte(buff)
@@ -223,29 +238,24 @@ def readuleb128(buff):
     return result
 
 
-def readusleb128(buff):
-    result = get_byte(buff)
-    if result > 0x7f:
-        cur = get_byte(buff)
-        result = (result & 0x7f) | ((cur & 0x7f) << 7)
-        if cur > 0x7f:
-            cur = get_byte(buff)
-            result |= (cur & 0x7f) << 14
-            if cur > 0x7f:
-                cur = get_byte(buff)
-                result |= (cur & 0x7f) << 21
-                if cur > 0x7f:
-                    cur = get_byte(buff)
-                    result |= cur << 28
-
-    return result
-
-
 def readuleb128p1(buff):
+    """
+    Read an unsigned LEB128p1 at the current position of the buffer.
+    This format is the same as uLEB128 but has the ability to store the value -1.
+
+    :param buff: a file like object
+    :return: decoded uLEB128p1
+    """
     return readuleb128(buff) - 1
 
 
 def readsleb128(buff):
+    """
+    Read a signed LEB128 at the current position of the buffer.
+
+    :param buff: a file like object
+    :return: decoded sLEB128
+    """
     result = 0
     shift = 0
 
@@ -266,6 +276,17 @@ def readsleb128(buff):
 
 
 def writeuleb128(value):
+    """
+    Convert an integer value to the corresponding unsigned LEB128.
+
+    Raises a value error, if the given value is negative.
+
+    :param value: non-negative integer
+    :return: bytes
+    """
+    if value < 0:
+        raise ValueError("value must be non-negative!")
+
     remaining = value >> 7
 
     buff = bytearray()
@@ -280,9 +301,14 @@ def writeuleb128(value):
 
 
 def writesleb128(value):
+    """
+    Convert an integer value to the corresponding signed LEB128
+
+    :param value: integer value
+    :return: bytes
+    """
     remaining = value >> 7
     hasMore = True
-    end = 0
     buff = bytearray()
 
     if (value & (-sys.maxsize - 1)) == 0:
@@ -563,6 +589,9 @@ class AnnotationOffItem(object):
         self.CM = cm
         self.annotation_off = unpack("=I", buff.read(4))[0]
 
+    def get_annotation_off(self):
+        return self.annotation_off
+
     def show(self):
         bytecode._PrintSubBanner("Annotation Off Item")
         bytecode._PrintDefault("annotation_off=0x%x\n" % self.annotation_off)
@@ -809,7 +838,7 @@ class MethodAnnotation(object):
 
         :rtype: int
         """
-        return self.get_method_idx
+        return self.method_idx
 
     def get_annotations_off(self):
         """
@@ -1251,18 +1280,18 @@ class DebugInfoItem(object):
             elif bcode_value == DBG_ADVANCE_LINE:
                 bcode.add(readsleb128(buff), "s")
             elif bcode_value == DBG_START_LOCAL:
-                bcode.add(readusleb128(buff), "u")
+                bcode.add(readuleb128(buff), "u")
                 bcode.add(readuleb128p1(buff), "u1")
                 bcode.add(readuleb128p1(buff), "u1")
             elif bcode_value == DBG_START_LOCAL_EXTENDED:
-                bcode.add(readusleb128(buff), "u")
+                bcode.add(readuleb128(buff), "u")
                 bcode.add(readuleb128p1(buff), "u1")
                 bcode.add(readuleb128p1(buff), "u1")
                 bcode.add(readuleb128p1(buff), "u1")
             elif bcode_value == DBG_END_LOCAL:
-                bcode.add(readusleb128(buff), "u")
+                bcode.add(readuleb128(buff), "u")
             elif bcode_value == DBG_RESTART_LOCAL:
-                bcode.add(readusleb128(buff), "u")
+                bcode.add(readuleb128(buff), "u")
             elif bcode_value == DBG_SET_PROLOGUE_END:
                 pass
             elif bcode_value == DBG_SET_EPILOGUE_BEGIN:
@@ -2090,7 +2119,7 @@ class ProtoIdItem(object):
         """
         if self.parameters_off_value is None:
             params = self.CM.get_type_list(self.parameters_off)
-            self.parameters_off_value = '({})'.format(' '.join(params))
+            self.parameters_off_value = u'({})'.format(' '.join(params))
         return self.parameters_off_value
 
     def show(self):
@@ -2931,6 +2960,43 @@ class EncodedMethod(object):
         return "%s->%s%s [access_flags=%s] @ 0x%x" % (
             self.get_class_name(), self.get_name(), self.get_descriptor(),
             self.get_access_flags_string(), self.get_code_off())
+
+    def get_short_string(self):
+        """
+        Return a shorter formatted String which encodes this method.
+        The returned name has the form:
+        <classname> <methodname> ([arguments ...])<returntype>
+
+        * All Class names are condensed to the actual name (no package).
+        * Access flags are not returned.
+        * <init> and <clinit> are NOT replaced by the classname!
+
+        This name might not be unique!
+
+        :return: str
+        """
+        def _fmt_classname(cls):
+            arr = ""
+            # Test for arrays
+            while cls.startswith("["):
+                arr += "["
+                cls = cls[1:]
+
+            # is a object type
+            if cls.startswith("L"):
+                cls = cls[1:-1]
+            # only return last element
+            if "/" in cls:
+                cls = cls.rsplit("/", 1)[1]
+            return arr + cls
+
+        clsname = _fmt_classname(self.get_class_name())
+
+        param, ret = self.get_descriptor()[1:].split(")")
+        params = map(_fmt_classname, param.split(" "))
+        desc = "({}){}".format(" ".join(params), _fmt_classname(ret))
+
+        return "{cls} {meth} {desc}".format(cls=clsname, meth=self.get_name(), desc=desc)
 
     def show_info(self):
         """
@@ -6753,7 +6819,6 @@ class DalvikCode(object):
         self.insns_size = (len(code_raw) // 2) + (len(code_raw) % 2)
 
         buff = bytearray()
-        # buff += self.int_padding
         buff += pack("=H", self.registers_size) + \
                 pack("=H", self.ins_size) + \
                 pack("=H", self.outs_size) + \
@@ -6761,7 +6826,6 @@ class DalvikCode(object):
                 pack("=I", self.debug_info_off) + \
                 pack("=I", self.insns_size) + \
                 code_raw
-
 
         if self.tries_size > 0:
             if (self.insns_size % 2 == 1):
@@ -6792,8 +6856,7 @@ class DalvikCode(object):
             return self.code.get_instruction(idx, off)
 
     def get_size(self):
-        length = len(self.int_padding)
-
+        length = 0
         length += len(pack("=H", self.registers_size) + \
                       pack("=H", self.ins_size) + \
                       pack("=H", self.outs_size) + \

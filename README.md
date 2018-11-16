@@ -1,3 +1,5 @@
+![banner](https://raw.githubusercontent.com/androguard/androguard/master/assets/CI/banner.png)
+
 # Androguard
 
 [![Build Status](https://travis-ci.org/androguard/androguard.svg?branch=master)](https://travis-ci.org/androguard/androguard)
@@ -33,6 +35,24 @@ Find the documentation for master on [ReadTheDocs](http://androguard.readthedocs
 
 There are some (probably broken/outdated) examples and demos in the folders [demos](https://github.com/androguard/androguard/tree/master/demos) and [examples](https://github.com/androguard/androguard/tree/master/examples).
 
+## Projects using Androguard
+In alphabetical order
+
+* [AndroPyTool](https://github.com/alexMyG/AndroPyTool)
+* [AppKnox](http://appknox.com)
+* [Cuckoo Sandbox](https://cuckoosandbox.org)
+* [Droidbot](https://github.com/honeynet/droidbot)
+* [Droidstatx](https://github.com/integrity-sa/droidstatx)
+* [εxodus](https://github.com/Exodus-Privacy/exodus)
+* [F-Droid Server](https://gitlab.com/fdroid/fdroidserver)
+* [gplaycli](https://github.com/matlink/gplaycli)
+* [Koodous](https://koodous.com)
+* [MobSF](https://github.com/MobSF/Mobile-Security-Framework-MobSF)
+* [qiew](https://github.com/mtivadar/qiew)
+* [Viper Framework](https://github.com/viper-framework/viper)
+* ... and many more!
+
+You are using Androguard and are not listed here? Just create a [ticket](https://github.com/androguard/androguard/issues) or send us a [pull request](https://github.com/androguard/androguard/pulls) with your project!
 
 ## Licenses
 
